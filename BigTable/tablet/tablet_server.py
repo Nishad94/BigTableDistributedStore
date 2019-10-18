@@ -6,9 +6,9 @@ app = Flask(__name__)
 def index():
     return "Hello, World!"
 
-@app.route('/api/tables/', methods=['GET'])
-def list_tables():
-    pass
+@app.route('/api/tables/<int:pk>', methods=['GET'])
+def list_tables(pk):
+    return "Hi, listing tables " + str(pk)
 
 
 """
