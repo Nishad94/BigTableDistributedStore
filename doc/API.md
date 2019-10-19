@@ -10,6 +10,7 @@ Get information about tables.
 * [Create Table](tablet.md) : `POST /api/tables/`
 * [Delete Table](tablet.md) : `DELETE /api/tables/`
 * [Get Table Info](tablet.md) : `GET /api/tables/:pk/`
+GET /api/tables/123
 
 ### Operations
 
@@ -41,4 +42,3 @@ Allow clients to lock for use.
 
 * [Open](tablet.md) : `POST /api/lock/:pk/`
 * [Close](tablet.md) : `DELETE /api/lock/:pk/`
-
