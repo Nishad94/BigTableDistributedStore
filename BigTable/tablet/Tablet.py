@@ -1,8 +1,11 @@
+import collections
+import json
+
 class MemTable:
-    def __init__(self, capacity, tabletId, maxCellCopies):
+    def __init__(self, capacity, tablet, maxCellCopies):
         self.rowEntries = {}
         self.capacity = capacity
-        self.tabletId = tabletId
+        self.tablet = tablet
         self.maxCellCopies = maxCellCopies
     
     def getCurrentSize(self):
@@ -18,8 +21,9 @@ class MemTable:
             return self.rowEntries[rowKey]
     
     def addRow(self, rowKey, columnFamily, columnKey, cellContent, time_val):
-        if len(self.rowEntries) > self.capacity:
-            return False
+        if len(self.rowEntries) == self.capacity:
+            self.createSSTable()
+            self.clear()
 
         if rowKey not in self.rowEntries:
             entry = {}
@@ -48,22 +52,66 @@ class MemTable:
         cells = cells[:-1]
         return cells
 
+    def createSSTable(self):
+        sst = SSTable(len(self.tablet.ssTables),self,self.tablet)
+        self.tablet.addSST(sst)
+
 
 class SSTable:
-    def __init__(self, id, memTable, tabletId):
+    def __init__(self, id, memTable, tablet):
         self.id = id
         self.memTable = memTable
-        self.tabletId = tabletId
+        self.tablet = tablet
+        self.fileName = self.tablet.ssTablePath + "/" + str(self.tablet.id) + "_" + str(self.id) + ".sst"
+        self.sst = None
+        self.sstIndex = {}
+        if memTable:
+            self.createSST()
+            self.dumpToDisk()
+        else:   
+            self.readFromDisk()
     
-    def dumpToDisk():
-        pass
+    def createSST(self):
+        self.sst = collections.OrderedDict(sorted(self.memTable.rowEntries.items()))
+        
+    def serializeSSTAndCreateIndex(self):
+        serialized_sst = ""
+        for key, item in self.sst.items():
+            s = json.dumps(item) + "\n"
+            self.sstIndex[key] = len(serialized_sst)
+            serialized_sst += s
+        return serialized_sst
+
+    def serializeIndex(self):
+        return json.dumps(self.sstIndex)
+
+    def dumpToDisk(self):
+        serialised_dump = self.serializeSSTAndCreateIndex()
+        serialized_idx = self.serializeIndex()
+        with open(self.fileName,"w") as f:
+            f.write(serialised_dump+serialized_idx)
+    
+    def readFromDisk(self):
+        with open(self.fileName) as fp:
+            p = fp.seek(0,2)
+            while True:
+                if fp.read(1) == "\n":
+                    break
+                p -= 1
+                fp.seek(p,0)
+            p += 1
+            fp.seek(p,0)
+            self.sstIndex = json.loads(fp.readline())
+            for key,item in self.sstIndex.items():
+                fp.seek(item,0)
+                self.sst[key] = json.loads(fp.readline()[:-1] )
     
     def clear():
         pass
 
 
 class Tablet:
-    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, maxCellCopies = 5, tabletCapacity = 100, memTableCapacity = 10, ssTables = None, memTable = None):
+    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, maxCellCopies = 5, tabletCapacity = 100, memTableCapacity = 2, ssTables = None, memTable = None):
         """ A tablet is a way to horizontally shard data in a table (basically a list of rows). Thus each tablet is responsible for a range
         of row keys (lexicographic increasing). It consists of an in memory table which it dumps to disk periodically after it 
         reaches its capacity. The on-disk counterpart of the in-mem table is the SSTable. 
@@ -92,7 +140,10 @@ class Tablet:
         if ssTables is None:
             self.ssTables = []
         if memTable is None:
-            self.memTable = MemTable(memTableCapacity, self.id, maxCellCopies)
+            self.memTable = MemTable(memTableCapacity, self, maxCellCopies)
+    
+    def addSST(self,sst):
+        self.ssTables.append(sst)
     
     def getCurrentSize(self):
         return self.currentSize

@@ -100,7 +100,8 @@ def test_getRowRange():
     tableService.addNewEntry(tableName,"aab","cf1","c1","Hello!",124.0)
     tableService.addNewEntry(tableName,"ab","cf1","c1","Hello!",124.0)
     tableService.addNewEntry(tableName,"cd","cf1","c1","Hello!",124.0)
-    resp = tableService.getEntryRange(tableName,"aaa","c","cf1","c1")
+    tableService.addNewEntry(tableName,"dd","cf1","c1","Hello!",124.0)
+    resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
     print(resp)
     
 
