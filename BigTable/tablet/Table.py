@@ -19,3 +19,16 @@ class Table:
         """
         self.name = name
         self.columnFamilies = columnFamilies
+    
+    def getAsJSON(self):
+        resp = {}
+        resp["name"] = self.name
+        resp["column_families"] = []
+        for cf in self.columnFamilies:
+            cf_resp = {}
+            cf_resp["column_family_key"] = cf.name
+            cf_resp["columns"] = []
+            for c in cf.columns:
+                cf_resp["columns"].append(c)
+            resp["column_families"].append(cf_resp)
+        return resp

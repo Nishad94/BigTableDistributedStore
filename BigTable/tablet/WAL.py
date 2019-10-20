@@ -48,7 +48,7 @@ class WAL:
             f.write(self.log)
             self.log = ""
     
-    def appendAddQuery(self, rowKey, colFam, col, content):
+    def appendAddQuery(self, rowKey, colFam, col, content, time_val):
         pass
     
     def appendDeleteQuery(self, rowKey):

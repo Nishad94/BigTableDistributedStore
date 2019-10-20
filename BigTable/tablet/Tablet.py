@@ -1,8 +1,9 @@
 class MemTable:
-    def __init__(self, capacity, tabletId):
+    def __init__(self, capacity, tabletId, maxCellCopies):
         self.rowEntries = {}
         self.capacity = capacity
         self.tabletId = tabletId
+        self.maxCellCopies = maxCellCopies
     
     def getCurrentSize(self):
         return len(self.rowEntries)
@@ -11,21 +12,41 @@ class MemTable:
         self.rowEntries = {}
     
     def getRow(self, rowKey, columnFamily=None, columnKey=None):
-        return self.rowEntries[rowKey]
+        if columnFamily and columnKey:
+            return self.rowEntries[rowKey][columnFamily][columnKey]
+        else:
+            return self.rowEntries[rowKey]
     
-    def addRow(self, rowKey, columnFamily, columnKey, cellContent):
+    def addRow(self, rowKey, columnFamily, columnKey, cellContent, time_val):
         if len(self.rowEntries) > self.capacity:
             return False
 
         if rowKey not in self.rowEntries:
             entry = {}
+        else:
+            entry = self.rowEntries[rowKey]
+        if columnFamily not in entry:
             entry[columnFamily] = {}
-            entry[columnFamily][columnKey] = cellContent
-            self.rowEntries[rowKey] = rowKey
-            return True
+        if columnKey in entry[columnFamily]:
+            cells = entry[columnFamily][columnKey]
+        else:
+            cells = []
+            entry[columnFamily][columnKey] = cells
+        if len(cells) == self.maxCellCopies:
+            cells = self.removeOldestCell(rowKey, columnFamily, columnKey)
+            entry[columnFamily][columnKey] = cells
+        cells.append((cellContent,time_val))
+        self.rowEntries[rowKey] = entry
+        return True
     
     def deleteRow(self, rowKey):
-        pass
+        del self.rowEntries[rowKey]
+
+    def removeOldestCell(self, rowKey, columnFamily, columnKey):
+        cells = self.getRow(rowKey,columnFamily,columnKey)
+        cells.sort(key = lambda x: x[1])
+        cells = cells[:-1]
+        return cells
 
 
 class SSTable:
@@ -42,7 +63,7 @@ class SSTable:
 
 
 class Tablet:
-    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, tabletCapacity = 100, memTableCapacity = 10, ssTables = None, memTable = None):
+    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, maxCellCopies = 5, tabletCapacity = 100, memTableCapacity = 10, ssTables = None, memTable = None):
         """ A tablet is a way to horizontally shard data in a table (basically a list of rows). Thus each tablet is responsible for a range
         of row keys (lexicographic increasing). It consists of an in memory table which it dumps to disk periodically after it 
         reaches its capacity. The on-disk counterpart of the in-mem table is the SSTable. 
@@ -71,7 +92,7 @@ class Tablet:
         if ssTables is None:
             self.ssTables = []
         if memTable is None:
-            self.memTable = MemTable(memTableCapacity, self.id)
+            self.memTable = MemTable(memTableCapacity, self.id, maxCellCopies)
     
     def getCurrentSize(self):
         return self.currentSize
@@ -86,10 +107,29 @@ class Tablet:
         self.memTable.clear()
     
     def getRow(self, rowKey, columnFamily=None, columnKey=None):
-        pass
+        return self.memTable.getRow(rowKey, columnFamily, columnKey)
     
-    def addRow(self, rowKey, columnFamily, columnKey, cellContent):
-        self.memTable.addRow(rowKey, columnFamily, columnKey, cellContent)
+    def getAllRows(self, columnFamily, columnKey):
+        allEntries = self.memTable.rowEntries
+        resp = {}
+        for entry in allEntries:
+            resp[entry] = allEntries[entry][columnFamily][columnKey]
+        return resp
+    
+    def getRowRange(self, rowKeyStart, rowKeyEnd, columnFamily, columnKey):
+        rows = self.getAllRows(columnFamily,columnKey)
+        resp = {}
+        for r in rows:
+            if r[:len(rowKeyStart)] >= rowKeyStart and r[:len(rowKeyEnd)] <= rowKeyEnd:
+                resp[r] = rows[r]
+        return resp
+
+
+    def addRow(self, rowKey, columnFamily, columnKey, cellContent, time_val):
+        self.memTable.addRow(rowKey, columnFamily, columnKey, cellContent, time_val)
+    
+    def intersect(self, rowKey):
+        return self.startKey <= rowKey[:len(self.startKey)] and self.endKey >= rowKey[:len(self.endKey)]
     
     def delete(self):
         self.memTable.clear()

@@ -28,8 +28,12 @@ class MetadataManager:
         tablets_for_table.append(tablet)
     
     def getRelevantTablet(self,tableName,rowKey):
-        pass
-    
+        tablets = self.getAllTablets(tableName)
+        for t in tablets:
+            if t.intersect(rowKey) is True:
+                return t
+        raise "ERROR: No relevant tablet!"
+        
     def getAllTablets(self, tableName):
         if tableName in self.tableTabletMap:
             return self.tableTabletMap[tableName]

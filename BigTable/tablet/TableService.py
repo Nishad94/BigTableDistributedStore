@@ -34,24 +34,33 @@ class TableService:
         return table_names
 
     def getTableInfo(self, tableName):
-        table = self.metaMgr.getTableInfo(tableName)
+        table = self.metaMgr.getTable(tableName)
         return table
     
     def getEntry(self, tableName, rowKey, colFam = None, col = None):
-        tablet = self.getRelevantTablet(tableName, rowKey)
+        tablet = self.metaMgr.getRelevantTablet(tableName, rowKey)
         data = tablet.getRow(rowKey,colFam,col)
         return data
     
-    def addNewEntry(self, tableName, rowKey, colFam, col, content):
-        self.WALIdx[tableName].appendAddQuery(tableName, rowKey, colFam, col, content)
+    def getEntryRange(self, tableName, rowKeyStart, rowKeyEnd, colFam, col):
+        tablet = self.metaMgr.getAllTablets(tableName)
+        data = {}
+        for t in tablet:
+            curr = t.getRowRange(rowKeyStart,rowKeyEnd,colFam,col)
+            if curr is not None and len(curr) > 0:
+                data = dict(list(data.items()) + list(curr.items()))
+        return data
+    
+    def addNewEntry(self, tableName, rowKey, colFam, col, content, time_val):
+        self.WALIdx[tableName].appendAddQuery(rowKey, colFam, col, content, time_val)
         self.WALIdx[tableName].save()
         tablet = self.metaMgr.getRelevantTablet(tableName, rowKey)
         if tablet.isFull() is False:
             self.splitTablet(tablet)
             tablet = self.metaMgr.getRelevantTablet(tableName, rowKey)
-        tablet.addRow(rowKey, colFam, col, content)
+        tablet.addRow(rowKey, colFam, col, content, time_val)
     
-    def splitTablet(self):
+    def splitTablet(self,tablet):
         pass
 
     def createTablet(self, table):
