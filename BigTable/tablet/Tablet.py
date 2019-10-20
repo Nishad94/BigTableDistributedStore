@@ -4,10 +4,13 @@ class MemTable:
         self.capacity = capacity
         self.tabletId = tabletId
     
+    def getCurrentSize(self):
+        return len(self.rowEntries)
+    
     def clear(self):
         self.rowEntries = {}
     
-    def getRow(self, rowKey, columnFamily=None,columnKey=None):
+    def getRow(self, rowKey, columnFamily=None, columnKey=None):
         return self.rowEntries[rowKey]
     
     def addRow(self, rowKey, columnFamily, columnKey, cellContent):
@@ -33,10 +36,13 @@ class SSTable:
     
     def dumpToDisk():
         pass
+    
+    def clear():
+        pass
 
 
 class Tablet:
-    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, memTableCapacity = 10, ssTables = None, memTable = None):
+    def __init__(self, id, serverId, tableName, startKey, endKey, ssTablePath, tabletCapacity = 100, memTableCapacity = 10, ssTables = None, memTable = None):
         """ A tablet is a way to horizontally shard data in a table (basically a list of rows). Thus each tablet is responsible for a range
         of row keys (lexicographic increasing). It consists of an in memory table which it dumps to disk periodically after it 
         reaches its capacity. The on-disk counterpart of the in-mem table is the SSTable. 
@@ -57,13 +63,21 @@ class Tablet:
         self.tableName = tableName
         self.startKey = startKey
         self.endKey = endKey
+        self.tabletCapacity = tabletCapacity
         self.ssTables = ssTables
         self.ssTablePath = ssTablePath
         self.memTable = memTable
+        self.currentSize = 0
         if ssTables is None:
             self.ssTables = []
         if memTable is None:
             self.memTable = MemTable(memTableCapacity, self.id)
+    
+    def getCurrentSize(self):
+        return self.currentSize
+    
+    def isFull(self):
+        return self.getCurrentSize() >= self.tabletCapacity
     
     def createSSTable(self):
         ssTable = SSTable(len(self.ssTables), self.memTable, self.id)
@@ -71,8 +85,13 @@ class Tablet:
         ssTable.dumpToDisk(self.ssTablePath)
         self.memTable.clear()
     
-    def getRow(self,rowKey):
+    def getRow(self, rowKey, columnFamily=None, columnKey=None):
         pass
     
     def addRow(self, rowKey, columnFamily, columnKey, cellContent):
         self.memTable.addRow(rowKey, columnFamily, columnKey, cellContent)
+    
+    def delete(self):
+        self.memTable.clear()
+        for sst in self.ssTables:
+            sst.clear()

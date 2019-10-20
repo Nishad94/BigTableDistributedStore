@@ -1,5 +1,5 @@
 class ColumnFamily:
-    def __init__(self,name,columns):
+    def __init__(self, name, columns):
         """ Definition for a column family containing list of columns
         
         Args:
@@ -7,6 +7,7 @@ class ColumnFamily:
             columns (list[str]): list of column names
         """
         self.columns = columns
+        self.name = name
 
 class Table:
     def __init__(self, name, columnFamilies):

@@ -16,7 +16,7 @@ class MetadataManager:
     def getTables(self):
         return list(self.tableIdx.values())
     
-    def getTableInfo(self, tableName):
+    def getTable(self, tableName):
         return self.tableIdx[tableName]
     
     def addTable(self, table, tablet):
@@ -31,4 +31,13 @@ class MetadataManager:
         pass
     
     def getAllTablets(self, tableName):
-        return self.tableTabletMap[tableName]
+        if tableName in self.tableTabletMap:
+            return self.tableTabletMap[tableName]
+        return []
+    
+    def removeTable(self, tableName):
+        tablets = self.getAllTablets(tableName)
+        for t in tablets:
+            t.delete()
+        del self.tableTabletMap[tableName]
+        del self.tableIdx[tableName]
