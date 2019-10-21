@@ -16,6 +16,12 @@ class TableService:
         self.metadataPath = metadataPath
         self.ssTablePath = ssTablePath
         self.walPath = walPath
+        if os.path.exists(self.metadataPath) is False:
+            os.mkdir(self.metadataPath)
+        if os.path.exists(self.ssTablePath) is False:
+            os.mkdir(self.ssTablePath)
+        if os.path.exists(self.walPath) is False:
+            os.mkdir(self.walPath)
         self.WALIdx = {}
         self.loadWAL()
     

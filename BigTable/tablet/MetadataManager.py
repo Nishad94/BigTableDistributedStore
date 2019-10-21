@@ -19,6 +19,7 @@ class MetadataManager:
         if os.path.exists(self.table_meta) and os.path.exists(self.tablet_meta):
             self.loadFromDisk()
 
+
     def loadFromDisk(self):
         with open(self.tablet_meta) as f:
             tablet_map = json.loads(f.read())
