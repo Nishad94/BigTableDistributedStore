@@ -1,6 +1,7 @@
 from MetadataManager import MetadataManager
 from WAL import WAL
 from Tablet import Tablet
+import os
 
 class TableService:
     def __init__(self, metadataPath, ssTablePath, walPath):
@@ -16,11 +17,20 @@ class TableService:
         self.ssTablePath = ssTablePath
         self.walPath = walPath
         self.WALIdx = {}
+        self.loadWAL()
     
-    def createTable(self, table):
-        wal = WAL(self.walPath, table)
+    def loadWAL(self):
+        tables = self.metaMgr.getTables()
+        for t in tables:
+            if os.path.exists(self.walPath + "/" + t.name + ".wal"):
+                with open(self.walPath + "/" + t.name + ".wal") as f:
+                    self.WALIdx[t.name] = WAL(self.walPath,t.name,f.read())
+                    self.WALIdx[t.name].replay(self)
+    
+    def createTable(self, table, maxCellCopies = 5, tabletCapacity = 100, memTableCapacity = 100):
+        wal = WAL(self.walPath, table.name)
         self.WALIdx[table.name] = wal
-        tablet = self.createTablet(table)
+        tablet = self.createTablet(table,maxCellCopies,tabletCapacity,memTableCapacity)
         self.metaMgr.addTable(table,tablet)
     
     def deleteTable(self,tableName):
@@ -51,19 +61,22 @@ class TableService:
                 data = dict(list(data.items()) + list(curr.items()))
         return data
     
-    def addNewEntry(self, tableName, rowKey, colFam, col, content, time_val):
-        self.WALIdx[tableName].appendAddQuery(rowKey, colFam, col, content, time_val)
-        self.WALIdx[tableName].save()
+    def addNewEntry(self,tableName, rowKey, colFam, col, content, time_val, walWrite=True):
+        if walWrite is True:
+            self.WALIdx[tableName].appendAddQuery(rowKey, colFam, col, content, time_val)
+            self.WALIdx[tableName].save()
         tablet = self.metaMgr.getRelevantTablet(tableName, rowKey)
-        if tablet.isFull() is False:
+        if tablet.isFull() is True:
             self.splitTablet(tablet)
             tablet = self.metaMgr.getRelevantTablet(tableName, rowKey)
-        tablet.addRow(rowKey, colFam, col, content, time_val)
+        meta_change = tablet.addRow(rowKey, colFam, col, content, time_val)
+        if meta_change:
+            self.metaMgr.dumpToDisk()
     
     def splitTablet(self,tablet):
         pass
 
-    def createTablet(self, table):
+    def createTablet(self, table, maxCellCopies, tabletCapacity, memTableCapacity):
         curr_tablets = self.metaMgr.getAllTablets(table.name)
-        tablet = Tablet(len(curr_tablets), 0, table.name, 'a', 'z', self.ssTablePath)
+        tablet = Tablet(len(curr_tablets), 0, table.name, 'a', 'z', self.ssTablePath, None, maxCellCopies, tabletCapacity, memTableCapacity)
         return tablet

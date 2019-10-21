@@ -53,7 +53,7 @@ def test_getTableInfo():
     table = createTable(tableName)
     tableService.createTable(table)
     t_info = tableService.getTableInfo(tableName)
-    print(t_info.getAsJSON())
+    print(t_info.getAsJson())
     tableService.deleteTable(tableName)
 
 def test_insertEntry():
@@ -91,6 +91,7 @@ def test_insertEntry():
             break
     if not found:
         raise "Error in retrieval or insertion"
+    tableService.deleteTable(tableName)
     
 def test_getRowRange():
     tableName = "testTable"
@@ -103,7 +104,52 @@ def test_getRowRange():
     tableService.addNewEntry(tableName,"dd","cf1","c1","Hello!",124.0)
     resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
     print(resp)
-    
+    tableService.deleteTable(tableName)
+
+def test_tabletCapacity():
+    pass
+
+def test_maxCellCopies():
+    tableName = "testTable"
+    table = createTable(tableName)
+    tableService.createTable(table,2)
+    tableService.addNewEntry(tableName,"first","cf1","c1","Hello!",123.0)
+    tableService.addNewEntry(tableName,"first","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"first","cf1","c1","Hello!",125.0)
+    cells = tableService.getEntry(tableName,"first","cf1","c1")
+    if len(cells) != 2:
+        raise "Error! Inexact number of entries"
+    print(cells)
+    for c in cells:
+        if c[1] == 123.0:
+            raise "Error: Newer value expected"
+    tableService.deleteTable(tableName)
+
+def test_memTableCapacity():
+    tableName = "testTable"
+    table = createTable(tableName)
+    tableService.createTable(table,5,100,2)
+    tableService.addNewEntry(tableName,"aaa","cf1","c1","Hello!",123.0)
+    tableService.addNewEntry(tableName,"aab","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"ab","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"cd","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"dd","cf1","c1","Hello!",124.0)
+    resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
+    print(resp)
+    if len(tableService.metaMgr.getRelevantTablet(tableName,"ab").ssTables) != 2:
+        raise "Error: SSTable splits not working properly!"
+    tableService.deleteTable(tableName)
+
+def test_queryRecovery():
+    tableName = "testTable"
+    resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
+    print(resp)
+    if len(tableService.metaMgr.getRelevantTablet(tableName,"ab").ssTables) != 2:
+        raise "Error: SSTable splits not working properly!"
+    resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
+    print(resp)
+    tableService.deleteTable(tableName)
+
 
 if __name__ == "__main__":
     init_service("metadata","sst","wal")
@@ -113,3 +159,6 @@ if __name__ == "__main__":
     test_getTableInfo()
     test_insertEntry()
     test_getRowRange()
+    test_maxCellCopies()
+    test_memTableCapacity()
+    test_queryRecovery()
