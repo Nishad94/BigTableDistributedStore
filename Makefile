@@ -2,7 +2,9 @@ include hosts.mk
 
 # EDIT THIS
 MASTER_CMD=python3 sample_server.py
-TABLET_CMD=python3 sample_server.py
+TABLET_CMD=source tablet_proj/bin/activate; pip install -r tablet_proj/requirements.txt; python tablet_proj/tablet_server.py
+WAL=wal
+SSTABLE_FOLDER=sst
 # END EDIT REGION
 
 # if you require any compilation, fill in this section

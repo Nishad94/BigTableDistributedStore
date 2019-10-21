@@ -24,7 +24,10 @@ class MemTable:
         if rowKey not in self.rowEntries:
             return None
         if columnFamily and columnKey:
-            return self.rowEntries[rowKey][columnFamily][columnKey]
+            if columnFamily in self.rowEntries[rowKey] and columnKey in self.rowEntries[rowKey][columnFamily]:
+                return self.rowEntries[rowKey][columnFamily][columnKey]
+            else:
+                return None
         else:
             return self.rowEntries[rowKey]
     
@@ -140,7 +143,10 @@ class SSTable:
         self.readFromDisk()
         
         if columnFamily and columnKey:
-            row = self.sst[rowKey][columnFamily][columnKey]
+            if columnFamily in self.sst[rowKey] and columnKey in self.sst[rowKey][columnFamily]:
+                row = self.sst[rowKey][columnFamily][columnKey]
+            else:
+                row = None
         else:
             row = self.sst[rowKey]
         self.clearFromMemory()
@@ -256,7 +262,7 @@ class Tablet:
         return self.memTable.addRow(rowKey, columnFamily, columnKey, cellContent, time_val)
     
     def intersect(self, rowKey):
-        return self.startKey <= rowKey[:len(self.startKey)] and self.endKey >= rowKey[:len(self.endKey)]
+        return self.startKey <= str(rowKey)[:len(self.startKey)] and self.endKey >= str(rowKey)[:len(self.endKey)]
     
     def delete(self):
         self.memTable.clear()

@@ -16,12 +16,6 @@ class TableService:
         self.metadataPath = metadataPath
         self.ssTablePath = ssTablePath
         self.walPath = walPath
-        if os.path.exists(self.metadataPath) is False:
-            os.mkdir(self.metadataPath)
-        if os.path.exists(self.ssTablePath) is False:
-            os.mkdir(self.ssTablePath)
-        if os.path.exists(self.walPath) is False:
-            os.mkdir(self.walPath)
         self.WALIdx = {}
         self.loadWAL()
     
@@ -95,5 +89,5 @@ class TableService:
 
     def createTablet(self, table, maxCellCopies, tabletCapacity, memTableCapacity):
         curr_tablets = self.metaMgr.getAllTablets(table.name)
-        tablet = Tablet(len(curr_tablets), 0, table.name, 'a', 'z', self.ssTablePath, None, maxCellCopies, tabletCapacity, memTableCapacity)
+        tablet = Tablet(len(curr_tablets), 0, table.name, '0', 'z', self.ssTablePath, None, maxCellCopies, tabletCapacity, memTableCapacity)
         return tablet

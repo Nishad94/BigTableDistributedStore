@@ -1,22 +1,24 @@
 import json
+import sys
+import os
 from flask import Flask, request
 from flask import Response
 from TableService import TableService
 from Table import Table, ColumnFamily
 
 app = Flask(__name__)
-metadataPath = "metadata"
-ssTablePath="sst"
-walPath="wal"
-tableService = TableService(metadataPath, ssTablePath, walPath)
 
-@app.route('/api/table/', methods=['GET'])
+tableService = None
+
+@app.route('/api/tables/', methods=['GET'])
 def list_tables():
     tables = tableService.listTables()
-    resp = Response(json.dumps(tables), status=200, content_type='application/json')
+    resp = {}
+    resp["tables"] = tables
+    resp = Response(json.dumps(resp), status=200, content_type='application/json')
     return resp
 
-@app.route('/api/table/', methods=['POST'])
+@app.route('/api/tables/', methods=['POST'])
 def create_table():
     try:
         req = json.loads(request.data)
@@ -43,25 +45,26 @@ def create_table():
         resp = Response(None, status=409)
     return resp
 
-@app.route('/api/table/<pk>', methods=['DELETE'])
+@app.route('/api/tables/<pk>', methods=['DELETE'])
 def destroy_table(pk):
-    print(pk)
     if tableService.tableExists(pk) is False:
         return Response(None,404)
     tableService.deleteTable(pk)
     return Response(None,200)
 
-@app.route('/api/table/<pk>', methods=['GET'])
+@app.route('/api/tables/<pk>', methods=['GET'])
 def get_table_info(pk):
     if tableService.tableExists(pk) is False:
         return Response(None,404)
     info = tableService.getTableInfo(pk)
-    print(info.getAsJson())
     return Response(info.getAsJson(),200,content_type="application/json")
 
 @app.route('/api/table/<pk>/cell', methods=['POST'])
 def insert_cell(pk):
-    req = json.loads(request.data)
+    try:
+        req = json.loads(request.data)
+    except:
+        return Response(None,404)
     tableName = pk
     rowKey = req["row"]
     cf = req["column_family"]
@@ -84,7 +87,10 @@ def insert_cell(pk):
 
 @app.route('/api/table/<pk>/cell', methods=['GET'])
 def retrieve_cell(pk):
-    req = json.loads(request.data)
+    try:
+        req = json.loads(request.data)
+    except:
+        return Response(None,404)
     tableName = pk
     rowKey = req["row"]
     cf = req["column_family"]
@@ -125,12 +131,12 @@ def retrieve_cells(pk):
             break
     if t_cf is None or col not in t_cf.columns:
         return Response(None,400)
-    rowStart = req["row_from"]
-    rowEnd = req["row_to"]
+    rowStart = str(req["row_from"])
+    rowEnd = str(req["row_to"])
     rows = tableService.getEntryRange(tableName,rowStart,rowEnd,cf,col)
     resp = {}
     resp["rows"] = []
-    if entry is not None:
+    if rows is not None:
         for rowName,vals in rows.items():
             inner = {}
             inner["row"] = rowName
@@ -170,14 +176,26 @@ def retrieve_row(pk):
 @app.route('/api/memtable', methods=['POST'])
 def set_memtable_max():
     try:
-        newVal = int(request.data)
+        newVal = json.loads(request.data)
     except:
         return Response(None,400)
     tables = tableService.listTables()
     for t in tables:
-        tableService.changeMemtableCapacity(t,newVal)
+        tableService.changeMemtableCapacity(t,int(newVal["memtable_max"]))
     return Response(None,200)
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    walPath = sys.argv[5]
+    ssTablePath = sys.argv[6]
+    metadataPath = "metadata"
+    ## These meta files must be removed for clean slate!
+    if os.path.exists(metadataPath) is False:
+        os.mkdir(metadataPath)
+    if os.path.exists(ssTablePath) is False:
+        os.mkdir(ssTablePath)
+    if os.path.exists(walPath) is False:
+        os.mkdir(walPath)
+    tableService = TableService(metadataPath, ssTablePath, walPath)
+    app.run(host=sys.argv[1], port=sys.argv[2])
+    
