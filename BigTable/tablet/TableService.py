@@ -73,6 +73,11 @@ class TableService:
         if meta_change:
             self.metaMgr.dumpToDisk()
     
+    def changeMaxCells(self,tableName,newVal):
+        tablets = self.metaMgr.getAllTablets(tableName)
+        for t in tablets:
+            t.changeMaxCellCopies(newVal)
+    
     def splitTablet(self,tablet):
         pass
 

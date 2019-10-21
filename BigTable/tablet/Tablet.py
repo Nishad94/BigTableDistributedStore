@@ -9,6 +9,11 @@ class MemTable:
         self.tablet = tablet
         self.maxCellCopies = maxCellCopies
     
+    def changeMaxCellCopies(self, newVal):
+        self.maxCellCopies = newVal
+        if len(self.rowEntries) > self.maxCellCopies:
+            self.createSSTable()
+    
     def getCurrentSize(self):
         return len(self.rowEntries)
     
@@ -176,6 +181,9 @@ class Tablet:
         self.memTable = MemTable(memTableCapacity, self, maxCellCopies)
         if loadFromJson is not None:
             self.loadFromJson(loadFromJson)
+
+    def changeMaxCellCopies(self, newVal):
+        self.memTable.changeMaxCellCopies(newVal)
     
     def serialize(self):
         s = {

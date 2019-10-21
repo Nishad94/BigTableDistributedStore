@@ -150,15 +150,33 @@ def test_queryRecovery():
     print(resp)
     tableService.deleteTable(tableName)
 
+def test_changeMaxCellCopies():
+    tableName = "testTable"
+    table = createTable(tableName)
+    tableService.createTable(table,5,100,3)
+    tableService.addNewEntry(tableName,"aaa","cf1","c1","Hello!",123.0)
+    tableService.addNewEntry(tableName,"aab","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"ab","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"cd","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"dd","cf1","c1","Hello!",124.0)
+    tableService.changeMaxCells(tableName,1)
+    tableService.addNewEntry(tableName,"de","cf1","c1","Hello!",124.0)
+    tableService.addNewEntry(tableName,"df","cf1","c1","Hello!",124.0)
+    resp = tableService.getEntryRange(tableName,"aaa","d","cf1","c1")
+    print(resp)
+    
+    tableService.deleteTable(tableName)
+
 
 if __name__ == "__main__":
     init_service("metadata","sst","wal")
-    test_createTable()
-    test_deleteTable()
-    test_listTables()
-    test_getTableInfo()
-    test_insertEntry()
-    test_getRowRange()
-    test_maxCellCopies()
-    test_memTableCapacity()
-    test_queryRecovery()
+    # test_createTable()
+    # test_deleteTable()
+    # test_listTables()
+    # test_getTableInfo()
+    # test_insertEntry()
+    # test_getRowRange()
+    # test_maxCellCopies()
+    # test_memTableCapacity()
+    # test_queryRecovery()
+    test_changeMaxCellCopies()
