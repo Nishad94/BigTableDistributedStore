@@ -45,10 +45,19 @@ class WAL:
     
     def replay(self, tableService):
         queries = self.log.split("\n")
+        queries.reverse()
+
         for q in queries:
             parts = q.split(",")
+            if len(parts) == 0:
+                continue
             if parts[0] == "INSERT":
-                if tableService.getEntry(self.tableName, parts[1], parts[2], parts[3]) is None:
+                cells = tableService.getEntry(self.tableName, parts[1], parts[2], parts[3])
+                found = False
+                if cells is not None:
+                    for c in cells:
+                        if c[0] == parts[4] and c[1] == float(parts[5]):
+                            found = True
+                            break
+                if found is False:
                     tableService.addNewEntry(self.tableName, parts[1], parts[2], parts[3], parts[4], parts[5],False)
-                else:
-                    return

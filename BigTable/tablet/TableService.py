@@ -28,10 +28,16 @@ class TableService:
                     self.WALIdx[t.name].replay(self)
     
     def createTable(self, table, maxCellCopies = 5, tabletCapacity = 100, memTableCapacity = 100):
+        if self.tableExists(table.name):
+            return False
         wal = WAL(self.walPath, table.name)
         self.WALIdx[table.name] = wal
         tablet = self.createTablet(table,maxCellCopies,tabletCapacity,memTableCapacity)
         self.metaMgr.addTable(table,tablet)
+        return True
+    
+    def tableExists(self,tableName):
+        return tableName in self.WALIdx
     
     def deleteTable(self,tableName):
         self.metaMgr.removeTable(tableName)
@@ -73,10 +79,10 @@ class TableService:
         if meta_change:
             self.metaMgr.dumpToDisk()
     
-    def changeMaxCells(self,tableName,newVal):
+    def changeMemtableCapacity(self,tableName,newVal):
         tablets = self.metaMgr.getAllTablets(tableName)
         for t in tablets:
-            t.changeMaxCellCopies(newVal)
+            t.changeMemtableCapacity(newVal)
     
     def splitTablet(self,tablet):
         pass

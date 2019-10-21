@@ -24,7 +24,8 @@ class Table:
         """
         self.name = name
         self.columnFamilies = columnFamilies
-        if loadFromJson:
+        
+        if loadFromJson is not None:
             self.loadFromJson(loadFromJson)
     
     def getAsJson(self):
@@ -44,7 +45,7 @@ class Table:
         resp = json.loads(jsonStr)
         self.name = resp["name"]
         self.columnFamilies = []
-        for cf in self.columnFamilies:
+        for cf in resp["column_families"]:
             cf_name = cf["column_family_key"]
             cf_cols = cf["columns"]
             self.columnFamilies.append(ColumnFamily(cf_name,cf_cols))

@@ -1,1 +1,1 @@
-{}
+{"table3": ["{\"id\": 0, \"serverId\": 0, \"tableName\": \"table3\", \"startKey\": \"a\", \"endKey\": \"z\", \"maxCellCopies\": 5, \"memTableCapacity\": 100, \"tabletCapacity\": 100, \"ssTablePath\": \"sst\", \"sstIds\": []}"]}

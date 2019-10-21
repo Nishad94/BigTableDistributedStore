@@ -1,1 +1,1 @@
-{}
+{"table3": "{\"name\": \"table3\", \"column_families\": [{\"column_family_key\": \"key1\", \"columns\": [\"column_key1\", \"column_key2\"]}, {\"column_family_key\": \"key2\", \"columns\": [\"column_key3\", \"column_key3\"]}]}"}
