@@ -3,6 +3,10 @@ import json
 import os
 
 class MemTable:
+    """An in memory data structure for storing most recent insertions/deletions in this tablet. After it reaches capacity it is dumped
+    to disk as an SST and then cleare. 
+    """
+
     def __init__(self, capacity, tablet, maxCellCopies):
         self.rowEntries = {}
         self.capacity = capacity
@@ -70,6 +74,9 @@ class MemTable:
 
 
 class SSTable:
+    """Stores the memtable on disk in sorted order. Also maintains an index at the EOF for fast retrieval of keys from specific offsets.
+    """
+
     def __init__(self, id, memTable, tablet):
         self.id = id
         self.tablet = tablet
@@ -90,9 +97,15 @@ class SSTable:
         self.sst = collections.OrderedDict(sorted(memTable.rowEntries.items()))
         
     def serializeSSTAndCreateIndex(self):
+        """Each entry's value is new-line seperated in the string. The key is stored in the index and is mapped to the starting offset
+        of its value in the serialized string.
+        
+        Returns:
+            serialized_sst: the sst as string
+        """
         serialized_sst = ""
-        for key, item in self.sst.items():
-            s = json.dumps(item) + "\n"
+        for key, val in self.sst.items():
+            s = json.dumps(val) + "\n"
             self.sstIndex[key] = len(serialized_sst)
             serialized_sst += s
         return serialized_sst
@@ -107,6 +120,9 @@ class SSTable:
             f.write(serialised_dump+serialized_idx)
     
     def readIndexFromDisk(self):
+        """From the EOF seek backwards until the first newline is found. The newline indicates
+        the end_idx of the stored vals, and beginning of the index.
+        """
         with open(self.fileName) as fp:
             p = fp.seek(0,2)
             while True:
@@ -119,6 +135,8 @@ class SSTable:
             self.sstIndex = json.loads(fp.readline())
     
     def readFromDisk(self):
+        """Read value of key from offset in the file
+        """
         with open(self.fileName) as fp:
             for key,item in self.sstIndex.items():
                 fp.seek(item,0)
@@ -160,16 +178,16 @@ class Tablet:
         reaches its capacity. The on-disk counterpart of the in-mem table is the SSTable. 
         
         Args:
-            id ([type]): [description]
-            serverId ([type]): [description]
-            tableName ([type]): [description]
-            startKey ([type]): [description]
-            endKey ([type]): [description]
-            ssTablePath ([type]): [description]
-            loadFromJson (boolean): Load Tablet from serialized string
-            memTableCapacity (int, optional): [description]. Defaults to 10.
-            ssTables ([type], optional): [description]. Defaults to None.
-            memTable ([type], optional): [description]. Defaults to None.
+            id (str): Unique id for this tablet. Currently using the current size of parent table in terms of tablets
+            serverId (str): Tablet server id. Each server might be responsible for multiple tablets
+            tableName (str): Name of the table
+            startKey (str): Start key
+            endKey (str): End key
+            ssTablePath (str): Path to store SSTs for this tablet on disk
+            loadFromJson (boolean): If true, load tablet from serialized string
+            maxCellCopies (int, optional): Dictates how many versions of a cell's history must be kept,  defaults to 5
+            tabletCapacity (int, optional): Max elements in tablet. Beyond this capacity the tablet splits into 2,  defaults to 100
+            memTableCapacity (int, optional): Beyond this capacity the memTable is dumped to disk as an SST, defaults to 100
         """
         self.id = id
         self.serverId = serverId
