@@ -91,3 +91,6 @@ class TableService:
         curr_tablets = self.metaMgr.getAllTablets(table.name)
         tablet = Tablet(len(curr_tablets), 0, table.name, '0', 'z', self.ssTablePath, None, maxCellCopies, tabletCapacity, memTableCapacity)
         return tablet
+    
+    def getTablets(self, tname):
+        return self.metaMgr.getAllTablets(tname)

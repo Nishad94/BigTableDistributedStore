@@ -50,16 +50,23 @@ class MetadataManager:
         with open(self.table_meta,"w") as f:
             f.write(s)
     
-    def getTables(self):
-        return list(self.tableIdx.values())
+    def getTables(self, serverIds):
+        tables = []
+        for t_name, tablets in self.tableTabletMap.items():
+            for tablet in tablets: 
+                if tablet.serverId in serverIds:
+                    tables.append(t_name)
+                    break
+        return tables
     
     def getTable(self, tableName):
         return self.tableIdx[tableName]
     
-    def addTable(self, table, tablet):
+    def addTable(self, table, tablet, dump=True):
         self.tableIdx[table.name] = table
         self.tableTabletMap[table.name] = [tablet]
-        self.dumpToDisk()
+        if dump is True:
+            self.dumpToDisk()
     
     def addTablet(self, tablet):
         tablets_for_table = self.tableTabletMap[tablet.tableName]

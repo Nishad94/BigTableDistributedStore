@@ -1,6 +1,7 @@
 import json
 import sys
 import os
+import requests
 from flask import Flask, request
 from flask import Response
 from TableService import TableService
@@ -9,6 +10,11 @@ from Table import Table, ColumnFamily
 app = Flask(__name__)
 
 tableService = None
+walPath = None
+ssTablePath = None
+metadataPath = None
+hostname = None
+port = None
 
 @app.route('/api/tables/', methods=['GET'])
 def list_tables():
@@ -184,11 +190,29 @@ def set_memtable_max():
         tableService.changeMemtableCapacity(t,int(newVal["memtable_max"]))
     return Response(None,200)
 
+@app.route('/api/heartbeat/<pk>',methods=['GET'])
+def get_tablets():
+    tableName = pk
+    tablet_info = []
+    tablets = tableService.getTablets(tableName)
+    for t in tablets:
+        tab = {}
+        tab["hostname"] = hostname
+        tab["port"] = port
+        tab["from_row"] = t.startKey
+        tab["to_row"] = t.endKey
+        tablet_info.append(tab)
+    return Response(json.dumps(tablet_info),200)
+
 
 if __name__ == '__main__':
     walPath = sys.argv[5]
     ssTablePath = sys.argv[6]
     metadataPath = "metadata"
+    hostname = sys.argv[1]
+    port = sys.argv[2]
+    master_host = sys.argv[3]
+    master_port = sys.argv[4]
     ## These meta files must be removed for clean slate!
     if os.path.exists(metadataPath) is False:
         os.mkdir(metadataPath)
@@ -197,5 +221,6 @@ if __name__ == '__main__':
     if os.path.exists(walPath) is False:
         os.mkdir(walPath)
     tableService = TableService(metadataPath, ssTablePath, walPath)
-    app.run(host=sys.argv[1], port=sys.argv[2])
+    requests.post(f"http://{master_host}:{master_port}/api/register/",data={"host":hostname,"port":port})
+    app.run(host=hostname, port=port)
     
